@@ -85,36 +85,42 @@ class Game {
             Vec2 cpos = new Vec2(newpos.x, newpos.y);
             cpos.wrap();
             //collision detection
-            if (Main.collisionDisabled || !collide(p, cpos,direction)) {
-                // don't fill trail when colliding
-                
-                DoubleBuffer verts = BufferUtils.createDoubleBuffer(8);
-                float anglet = p.angle + 0.5f * (float) Math.PI;
-                float langlet = p.lastAngle + 0.5f * (float) Math.PI;
-                float width = p.width;
-                verts.put((newpos.x + sin(anglet) * width));//*2-1);
-                verts.put((newpos.y - cos(anglet) * width));//*2-1);
+            int occQ = glGenQueries();
+            glBeginQuery(GL_SAMPLES_PASSED, occQ);
+            
+            DoubleBuffer verts = BufferUtils.createDoubleBuffer(8);
+            float anglet = p.angle + 0.5f * (float) Math.PI;
+            float langlet = p.lastAngle + 0.5f * (float) Math.PI;
+            float width = p.width;
+            verts.put((newpos.x + sin(anglet) * width));//*2-1);
+            verts.put((newpos.y - cos(anglet) * width));//*2-1);
 
-                verts.put((newpos.x - sin(anglet) * width));//*2-1);
-                verts.put((newpos.y + cos(anglet) * width));//*2-1);
-                //put pos back a little
-                pos.minus(Vec2.minus(newpos,pos).mult(0.5f));
-                verts.put((pos.x - sin(langlet) * width));//*2-1);
-                verts.put((pos.y + cos(langlet) * width));//*2-1);
+            verts.put((newpos.x - sin(anglet) * width));//*2-1);
+            verts.put((newpos.y + cos(anglet) * width));//*2-1);
+            //put pos back a little
+            pos.minus(Vec2.minus(newpos,pos).mult(0.5f));
+            verts.put((pos.x - sin(langlet) * width));//*2-1);
+            verts.put((pos.y + cos(langlet) * width));//*2-1);
 
-                verts.put((pos.x + sin(langlet) * width));//*2-1);
-                verts.put((pos.y - cos(langlet) * width));//*2-1);
-                verts.flip();
-                
-                glEnableClientState(GL_VERTEX_ARRAY);
-                glVertexPointer(2,0,verts);
-                GLGUI.checkError();
-                glDrawArrays(GL_QUADS, 0, 4);
-                GLGUI.checkError();
-                drawEdgeDebug();
-            }
+            verts.put((pos.x + sin(langlet) * width));//*2-1);
+            verts.put((pos.y - cos(langlet) * width));//*2-1);
+            verts.flip();
+            
             newpos.wrap();//field wrap
             p.pos = newpos;
+            
+            glEnableClientState(GL_VERTEX_ARRAY);
+            glVertexPointer(2,0,verts);
+            GLGUI.checkError();
+            glDrawArrays(GL_QUADS, 0, 4);
+            GLGUI.checkError();
+            
+            glEndQuery(GL_SAMPLES_PASSED);
+            int passed = glGetQueryObjectui(occQ,GL_QUERY_RESULT);
+            //TODO enable z-buffer
+            //TODO set z-buffer to discard anything wich has already been drawn
+            
+            glDeleteQueries(occQ);
         }
         
         glBindFramebuffer(GL_FRAMEBUFFER,0);
@@ -132,27 +138,12 @@ class Game {
     }
 
     boolean collide(Player p, Vec2 pos, Vec2 direction) {
-        pos.add(direction);
-        FloatBuffer buf = BufferUtils.createFloatBuffer(collisionAntiAA*collisionAntiAA*4);
-        int x = (int)Math.floor(( ( pos.x/2.0f) + 0.5f )*fieldSize) - collisionAntiAA/2;
-        int y = (int)Math.floor(( ( pos.y/2.0f) + 0.5f )*fieldSize) - collisionAntiAA/2;
-        glReadPixels(x, y, collisionAntiAA, collisionAntiAA, GL_RGBA, GL_FLOAT, buf);
-        GLGUI.checkError();
-        float r=0,g=0,b=0,a=0;
-        for (int i=0; i < (collisionAntiAA*collisionAntiAA);){
-            r += (buf.get(i++));
-            g += (buf.get(i++));
-            b += (buf.get(i++));
-            a += (buf.get(i++));
-        }
-        if(a>0)
-            System.out.println("r="+r+" g="+g+" b="+b+" a="+a);
-        if(a > 0){
-            //p.die();
-            return false;
-            
-        }
-        else return false;
+        //glEnable(GL_RASTERIZER_DISCARD);
+        
+        
+        
+        
+        return false;
     }
 
     void inputLogic(double deltaTime) {
