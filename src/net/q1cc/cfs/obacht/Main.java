@@ -19,7 +19,22 @@ class Main {
     
     public static void main(String[] args) {
         try {
-            System.setProperty("org.lwjgl.librarypath",new File(".").getCanonicalPath()+"/lib/native/windows");
+            String system;
+            String prop = System.getProperty("os.name");
+            if("Linux".contains(prop)){
+                system = "linux";
+            } else if("Windows".contains(prop)){
+                system = "windows";
+            } else if("Mac".contains(prop)){
+                system = "macosx";
+            } else if("Solaris".contains(prop)){
+                system = "solaris";
+            } else {
+                System.out.println("OHMYGODWTFWTFHELP");
+                return;
+            }
+            
+            System.setProperty("org.lwjgl.librarypath",new File(".").getCanonicalPath()+"/lib/native/"+system);
             System.setProperty("org.lwjgl.util.Debug","true");
             System.setProperty("org.lwjgl.util.NoChecks","false");
         } catch (IOException ex) {

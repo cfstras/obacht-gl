@@ -65,6 +65,8 @@ class Game {
         glBindTexture(GL_TEXTURE_2D,0);
         glBindFramebuffer(GL_FRAMEBUFFER,fieldFrameBuffer);
         glViewport(0,0,fieldSize,fieldSize);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS); //set z-buffer to discard anything wich has already been drawn
         //glClearColor(0.0f,0.0f,0.0f,1.0f);
         //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
@@ -84,45 +86,61 @@ class Game {
             newpos.add(direction);
             Vec2 cpos = new Vec2(newpos.x, newpos.y);
             cpos.wrap();
-            //collision detection
-            int occQ = glGenQueries();
-            glBeginQuery(GL_SAMPLES_PASSED, occQ);
             
-            DoubleBuffer verts = BufferUtils.createDoubleBuffer(8);
+            DoubleBuffer verts = BufferUtils.createDoubleBuffer(4*3);
             float anglet = p.angle + 0.5f * (float) Math.PI;
             float langlet = p.lastAngle + 0.5f * (float) Math.PI;
             float width = p.width;
             verts.put((newpos.x + sin(anglet) * width));//*2-1);
             verts.put((newpos.y - cos(anglet) * width));//*2-1);
-
+            verts.put(0.5);
+            
             verts.put((newpos.x - sin(anglet) * width));//*2-1);
             verts.put((newpos.y + cos(anglet) * width));//*2-1);
+            verts.put(0.5);
             //put pos back a little
             pos.minus(Vec2.minus(newpos,pos).mult(0.5f));
             verts.put((pos.x - sin(langlet) * width));//*2-1);
             verts.put((pos.y + cos(langlet) * width));//*2-1);
+            verts.put(0.5);
 
             verts.put((pos.x + sin(langlet) * width));//*2-1);
             verts.put((pos.y - cos(langlet) * width));//*2-1);
+            verts.put(0.5);
             verts.flip();
             
             newpos.wrap();//field wrap
             p.pos = newpos;
             
+            //collision detection
+            int occQ = glGenQueries();
+            glBeginQuery(GL_SAMPLES_PASSED, occQ);
+            
+            glDepthFunc(GL_GREATER);
+            glEnable(GL_RASTERIZER_DISCARD);
             glEnableClientState(GL_VERTEX_ARRAY);
-            glVertexPointer(2,0,verts);
+            glVertexPointer(3,0,verts);
             GLGUI.checkError();
             glDrawArrays(GL_QUADS, 0, 4);
             GLGUI.checkError();
             
             glEndQuery(GL_SAMPLES_PASSED);
-            int passed = glGetQueryObjectui(occQ,GL_QUERY_RESULT);
-            //TODO enable z-buffer
-            //TODO set z-buffer to discard anything wich has already been drawn
+            //now draw again
+            glDepthFunc(GL_ALWAYS);
+            glDisable(GL_RASTERIZER_DISCARD);
+            verts.put(2,1).put(5,1).put(8,1).put(11,1);
+            glVertexPointer(3,0,verts);
             
+            glDrawArrays(GL_QUADS, 0, 4);
+            
+            int passed = glGetQueryObjectui(occQ,GL_QUERY_RESULT);
+            if(passed>0){
+                System.out.println("passed: "+passed+" "+p.name);
+            }
             glDeleteQueries(occQ);
         }
         
+        glDisable(GL_DEPTH_TEST);
         glBindFramebuffer(GL_FRAMEBUFFER,0);
         glBindTexture(GL_TEXTURE_2D,fieldColorTexture);
         
@@ -135,15 +153,6 @@ class Game {
             pause=true;
             waitingForNewRound=true;
         }
-    }
-
-    boolean collide(Player p, Vec2 pos, Vec2 direction) {
-        //glEnable(GL_RASTERIZER_DISCARD);
-        
-        
-        
-        
-        return false;
     }
 
     void inputLogic(double deltaTime) {
@@ -209,6 +218,7 @@ class Game {
         
         glViewport(0,0,fieldSize,fieldSize);
         glClearColor(0.0f,0.0f,0.0f,0.0f);
+        glClearDepth(1.0);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         
         drawEdgeDebug();
