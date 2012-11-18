@@ -24,6 +24,8 @@ import static org.lwjgl.opengl.GL30.*;
  * @author claus
  */
 class Game {
+    
+    
     final static int collisionAntiAA = 2; 
     
     boolean pause = false;
@@ -66,7 +68,9 @@ class Game {
         glBindFramebuffer(GL_FRAMEBUFFER,fieldFrameBuffer);
         glViewport(0,0,fieldSize,fieldSize);
         glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LESS); //set z-buffer to discard anything wich has already been drawn
+       
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         //glClearColor(0.0f,0.0f,0.0f,1.0f);
         //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
@@ -74,10 +78,6 @@ class Game {
         Player alivePlayer=null;
         for (Player p : players) {
             if(!p.alive) continue;
-            playersAlive++;
-            alivePlayer = p;
-            glColor3ub((byte)p.color.getRed(), (byte)p.color.getGreen(), (byte)p.color.getBlue());
-            //glColor3f(1.0f,1.0f,1.0f);
             Vec2 pos = p.pos;
             Vec2 newpos = new Vec2();
             Vec2 direction = new Vec2();
@@ -99,7 +99,7 @@ class Game {
             verts.put((newpos.y + cos(anglet) * width));//*2-1);
             verts.put(0.5);
             //put pos back a little
-            pos.minus(Vec2.minus(newpos,pos).mult(0.5f));
+            pos.minus(Vec2.minus(newpos,pos).mult(0.3f));
             verts.put((pos.x - sin(langlet) * width));//*2-1);
             verts.put((pos.y + cos(langlet) * width));//*2-1);
             verts.put(0.5);
@@ -116,8 +116,9 @@ class Game {
             int occQ = glGenQueries();
             glBeginQuery(GL_SAMPLES_PASSED, occQ);
             
-            glDepthFunc(GL_GREATER);
-            glEnable(GL_RASTERIZER_DISCARD);
+            glDepthFunc(GL_LESS); //set z-buffer to discard anything wich has already been drawn
+            //glEnable(GL_RASTERIZER_DISCARD);
+            glColor4f(0,1,0,0.0f);
             glEnableClientState(GL_VERTEX_ARRAY);
             glVertexPointer(3,0,verts);
             GLGUI.checkError();
@@ -127,28 +128,33 @@ class Game {
             glEndQuery(GL_SAMPLES_PASSED);
             //now draw again
             glDepthFunc(GL_ALWAYS);
-            glDisable(GL_RASTERIZER_DISCARD);
+            //glDisable(GL_RASTERIZER_DISCARD);
             verts.put(2,1).put(5,1).put(8,1).put(11,1);
             glVertexPointer(3,0,verts);
-            
+            glColor4ub((byte)p.color.getRed(), (byte)p.color.getGreen(), (byte)p.color.getBlue(),(byte)255);
+            //glColor3f(1.0f,1.0f,1.0f);
             glDrawArrays(GL_QUADS, 0, 4);
             
             int passed = glGetQueryObjectui(occQ,GL_QUERY_RESULT);
-            if(passed>0){
-                System.out.println("passed: "+passed+" "+p.name);
-            }
             glDeleteQueries(occQ);
+            if(passed>7){
+                //collide!
+                p.die();
+            } else {
+                alivePlayer = p;
+                playersAlive++;
+            }
+            
         }
         
         glDisable(GL_DEPTH_TEST);
         glBindFramebuffer(GL_FRAMEBUFFER,0);
         glBindTexture(GL_TEXTURE_2D,fieldColorTexture);
         
-        if(playersAlive<=1 && false) {
+        if(playersAlive<=1) {
             //start new round
             if(alivePlayer!=null) {
-                alivePlayer.score++;
-                alivePlayer.lastScoreTime=time;
+                alivePlayer.lastAlive(time);
             }
             pause=true;
             waitingForNewRound=true;
@@ -217,8 +223,8 @@ class Game {
         }
         
         glViewport(0,0,fieldSize,fieldSize);
-        glClearColor(0.0f,0.0f,0.0f,0.0f);
-        glClearDepth(1.0);
+        glClearColor(0.0f,0.0f,0.0f,1.0f);
+        glClearDepth(0.0);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         
         drawEdgeDebug();

@@ -19,11 +19,13 @@ import java.awt.Polygon;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferStrategy;
+import java.nio.FloatBuffer;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.Sys;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.Display;
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL12.*;
 import static org.lwjgl.opengl.GL15.*;
 
 
@@ -46,8 +48,8 @@ class GLGUI {
     double timeSpeed = 1.0;
     double startTime;
     int windowLeftBorder    = 10;
-    int windowTopBorder     = 30;
-    int windowRightBorder   = 160;
+    int windowTopBorder     = 10;
+    int windowRightBorder   = 80;
     int windowBotBorder     = 10;
     int hudLeftBorder       = 10;
     int hudTopBorder        = 10;
@@ -129,32 +131,38 @@ class GLGUI {
         glClearColor(0.3f,0.3f,0.3f,1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         
-        //gui!
-        drawHUD();
+        
         //draw field
-        drawBorder();
         
         glViewport(windowLeftBorder, windowTopBorder, fieldSize, fieldSize);
         drawField();
         glViewport(0,0,windowX,windowY);
-        checkError();
+        drawBorder();
+        //gui!
+        drawHUD();
         Display.update();
         checkError();
     }
     private void drawBorder() {
         //draw border
-        //g.setColor(Color.WHITE);
-        int[] xpts = new int[4]; int[] ypts = new int[4];
-        xpts[0]=windowLeftBorder-1; ypts[0]=windowTopBorder-1;
-        xpts[1]=windowLeftBorder+fieldSize; ypts[1]=windowTopBorder-1;
-        xpts[2]=windowLeftBorder+fieldSize; ypts[2]=windowTopBorder+fieldSize;
-        xpts[3]=windowLeftBorder-1; ypts[3]=windowTopBorder+fieldSize;
-        //g.drawPolygon(xpts,ypts,4);
+        glPushMatrix();
+        glTranslatef(-1,-1,0);
+        glScalef(2f/windowX, 2f/windowY,1);
+        FloatBuffer pts = BufferUtils.createFloatBuffer(10);
+        pts.put(windowLeftBorder-1).put(windowTopBorder-1)
+        .put(windowLeftBorder+fieldSize).put(windowTopBorder-1)
+        .put(windowLeftBorder+fieldSize).put(windowTopBorder+fieldSize)
+        .put(windowLeftBorder-1).put(windowTopBorder+fieldSize)
+        .put(windowLeftBorder-1).put(windowTopBorder-1);
+        pts.flip();
+        glColor4f(1,1,1,1);
+        glVertexPointer(2,0,pts);
+        glDrawArrays(GL_LINE_STRIP, 0, 5);
+        glPopMatrix();
     }
     
     private void drawField() {
         
-        //TODO
         glEnable(GL_TEXTURE_2D);
         glBegin(GL_TRIANGLE_STRIP);
         glColor4f(1,1,1,1);
@@ -163,12 +171,22 @@ class GLGUI {
         glTexCoord2f(1,1); glVertex2f(1,1);
         glTexCoord2f(1,0); glVertex2f(1,-1);
         glEnd();
-        //TODO players
-//        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
-//        for(Player p: game.players){
-//            g.setColor(new Color(255-p.color.getRed(),255-p.color.getGreen(),255-p.color.getBlue()));
-//            g.fillOval((int)(p.pos.x*fieldSize-p.width*1.5f*fieldSize), (int)(p.pos.y*fieldSize-p.width*1.5f*fieldSize), (int)(p.width*3*fieldSize), (int)(p.width*3*fieldSize));
-//        }
+        glDisable(GL_TEXTURE_2D);
+        for(Player p: game.players){
+            glColor4ub((byte)p.color.getRed(),(byte)p.color.getGreen(),(byte)p.color.getBlue(),(byte)255); //TODO make the head blink?
+            glPushMatrix();
+            glTranslatef(p.pos.x,p.pos.y,0);
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex2f(0,0);
+            for(int i=0;i<17;i++) {
+                float x = (float)Math.cos(2*Math.PI*i/16.0f)*p.width*1.5f;
+                float y = (float)Math.sin(2*Math.PI*i/16.0f)*p.width*1.5f;
+                glVertex2f(x,y);
+            }
+            glEnd();
+            glPopMatrix();
+        }
+        
     }
     private void drawHUD() {
         //TODO all this crap

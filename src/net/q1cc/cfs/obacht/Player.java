@@ -13,6 +13,10 @@ import org.lwjgl.input.Keyboard;
  * @author claus
  */
 class Player {
+    
+    static int lastAlivePoints = 3;
+    static int collidePoints = -1;
+    
     Vec2 pos;
     float speed;
     float angle;
@@ -81,6 +85,12 @@ class Player {
         speed = 0;
         turnSpeed = 0;
         alive=false;
+        score += collidePoints;
+    }
+    
+    void lastAlive(double time) {
+        score += lastAlivePoints;
+        lastScoreTime=time;
     }
     
     @Override public String toString() {

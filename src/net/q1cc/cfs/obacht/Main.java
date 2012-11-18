@@ -8,7 +8,7 @@ import org.lwjgl.LWJGLException;
 
 class Main {
 
-    public final static int NUM_PLAYERS = 1;
+    public final static int NUM_PLAYERS = 3;
     public final static int GAME_FIELD_SIZE = 800;
     
     static boolean collisionDisabled=false;
@@ -21,16 +21,20 @@ class Main {
         try {
             String system;
             String prop = System.getProperty("os.name");
-            if("Linux".contains(prop)){
+            if(prop==null) {
+                System.out.println("Error: could not determine system type.");
+                return;
+            }
+            if(prop.contains("Linux")){
                 system = "linux";
-            } else if("Windows".contains(prop)){
+            } else if(prop.contains("Windows")){
                 system = "windows";
-            } else if("Mac".contains(prop)){
+            } else if(prop.contains("Mac")){
                 system = "macosx";
-            } else if("Solaris".contains(prop)){
+            } else if(prop.contains("Solaris")){
                 system = "solaris";
             } else {
-                System.out.println("OHMYGODWTFWTFHELP");
+                System.out.println("can't identify system \""+prop+"\"");
                 return;
             }
             
