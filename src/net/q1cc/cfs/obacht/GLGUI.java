@@ -78,6 +78,8 @@ class GLGUI {
                 dm=d;
         }
         windowX = dm.getWidth(); windowY = dm.getHeight();
+        windowRightBorder = windowX - fieldSize-windowLeftBorder;
+        windowBotBorder = windowY - fieldSize-windowTopBorder;
         Display.setDisplayMode(dm);
         System.out.println("displaymode: "+dm);
         Display.setSwapInterval(1);
@@ -134,7 +136,7 @@ class GLGUI {
         
         //draw field
         
-        glViewport(windowLeftBorder, windowTopBorder, fieldSize, fieldSize);
+        glViewport(windowLeftBorder, windowBotBorder, fieldSize, fieldSize);
         drawField();
         glViewport(0,0,windowX,windowY);
         drawBorder();
@@ -146,17 +148,26 @@ class GLGUI {
     private void drawBorder() {
         //draw border
         glPushMatrix();
-        glTranslatef(-1,-1,0);
-        glScalef(2f/windowX, 2f/windowY,1);
-        FloatBuffer pts = BufferUtils.createFloatBuffer(10);
-        pts.put(windowLeftBorder-1).put(windowTopBorder-1)
-        .put(windowLeftBorder+fieldSize).put(windowTopBorder-1)
-        .put(windowLeftBorder+fieldSize).put(windowTopBorder+fieldSize)
-        .put(windowLeftBorder-1).put(windowTopBorder+fieldSize)
-        .put(windowLeftBorder-1).put(windowTopBorder-1);
+        glLoadIdentity();
+        //glOrtho(0, windowX, windowY, 0, 0.1f,10f);
+        //glTranslatef(-1,-0.5f,0);
+        //glScalef(2f/windowX, 2f/windowY,1);
+        FloatBuffer pts = BufferUtils.createFloatBuffer(15);
+        glViewport(windowLeftBorder-1, windowBotBorder-1, fieldSize+1, fieldSize+1);
+        //pts.put(windowLeftBorder-1).put(windowTopBorder-1).put(1f)
+        //.put(windowLeftBorder+fieldSize).put(windowTopBorder-1).put(1f)
+        //.put(windowLeftBorder+fieldSize).put(windowTopBorder+fieldSize).put(1f)
+        //.put(windowLeftBorder-1).put(windowTopBorder+fieldSize).put(1f)
+        //.put(windowLeftBorder-1).put(windowTopBorder-1).put(1f);
+        float edge = 1-1.0f/(fieldSize+1);
+        pts .put(-1).put(edge).put(1f)
+            .put(edge).put(edge).put(1f)
+            .put(edge).put(-1).put(1f)
+            .put(-1).put(-1).put(1f)
+            .put(-1).put(edge).put(1f);
         pts.flip();
         glColor4f(1,1,1,1);
-        glVertexPointer(2,0,pts);
+        glVertexPointer(3,0,pts);
         glDrawArrays(GL_LINE_STRIP, 0, 5);
         glPopMatrix();
     }
