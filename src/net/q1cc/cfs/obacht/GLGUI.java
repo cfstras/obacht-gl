@@ -20,6 +20,7 @@ import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferStrategy;
 import java.nio.FloatBuffer;
+import net.q1cc.cfs.font.FontLoader;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.Sys;
 import org.lwjgl.input.Keyboard;
@@ -27,6 +28,11 @@ import org.lwjgl.opengl.Display;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL12.*;
 import static org.lwjgl.opengl.GL15.*;
+import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL21.*;
+import static org.lwjgl.opengl.GL30.*;
+import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Vector3f;
 
 
 /**
@@ -60,6 +66,8 @@ class GLGUI {
     DisplayMode dm;
     private boolean DEBUG=true;
     
+    FontLoader font;
+    
     public GLGUI(Game game) throws LWJGLException {
         this.game=game;
         fieldSize = game.fieldSize;
@@ -87,6 +95,14 @@ class GLGUI {
         Display.create();
         Display.makeCurrent();
         glViewport(0,0,windowX,windowY);
+        
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_ALWAYS);
+        
+        loadStuff();
+        
         startTime = lastFPSTime = lastFrameTime = time = Sys.getTime()/(double)Sys.getTimerResolution();
         
         //some debug info
@@ -99,7 +115,7 @@ class GLGUI {
         while(running){
             doInput();
             game.inputLogic(deltaTime);
-            game.gameLogic(deltaTime,time);
+            //game.gameLogic(deltaTime,time);
             draw();
             time = Sys.getTime()/(double)Sys.getTimerResolution();
             frameCounter++;
@@ -133,11 +149,10 @@ class GLGUI {
         glClearColor(0.3f,0.3f,0.3f,1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         
-        
         //draw field
         
         glViewport(windowLeftBorder, windowBotBorder, fieldSize, fieldSize);
-        drawField();
+        //drawField();
         glViewport(0,0,windowX,windowY);
         drawBorder();
         //gui!
@@ -149,7 +164,6 @@ class GLGUI {
         //draw border
         glPushMatrix();
         glLoadIdentity();
-        //glOrtho(0, windowX, windowY, 0, 0.1f,10f);
         //glTranslatef(-1,-0.5f,0);
         //glScalef(2f/windowX, 2f/windowY,1);
         FloatBuffer pts = BufferUtils.createFloatBuffer(15);
@@ -175,6 +189,7 @@ class GLGUI {
     private void drawField() {
         
         glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D,game.fieldColorTexture);
         glBegin(GL_TRIANGLE_STRIP);
         glColor4f(1,1,1,1);
         glTexCoord2f(0,1); glVertex2f(-1,1);
@@ -200,6 +215,12 @@ class GLGUI {
         
     }
     private void drawHUD() {
+        Matrix4f mat = new Matrix4f();
+        //mat = mat.translate(new Vector3f(-1.0f,1.0f,0.0f));
+        //mat = mat.scale(new Vector3f(1.0f/windowX, 1.0f/windowY, 1.0f));
+        mat = mat.scale(new Vector3f(0.2f, 0.2f, 1.0f));
+        font.drawString("A", mat);
+        
         //TODO all this crap
 //        int xoff = windowLeftBorder+fieldSize+hudLeftBorder;
 //        int yoff = windowTopBorder+hudTopBorder;
@@ -277,5 +298,10 @@ class GLGUI {
             //}
             //System.exit(-1);
         }
+    }
+
+    private void loadStuff() {
+        font = new FontLoader();
+        font.loadFont();
     }
 }

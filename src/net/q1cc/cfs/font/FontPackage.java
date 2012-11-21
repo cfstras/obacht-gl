@@ -9,9 +9,11 @@ import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.Graphics2D;
 import java.awt.Shape;
+import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
 import java.awt.geom.PathIterator;
 import java.awt.geom.Rectangle2D;
+import java.awt.geom.Rectangle2D.Float;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -26,8 +28,9 @@ public class FontPackage {
     public String fileName;
     public boolean loaded;
     Font awtFont;
-        
+    
     BufferedImage fontTex;
+    int size;
     
     char[] charIndex;
     Rectangle2D.Float[] charPosition;
@@ -47,16 +50,17 @@ public class FontPackage {
     }
     
     public void buildFont(String chars) {
+        FontRenderContext frc = new FontRenderContext(null, false, false);
         //count the needed vertice
-        Rectangle2D maxCharBounds = awtFont.getMaxCharBounds(null);
+        Rectangle2D maxCharBounds = awtFont.getMaxCharBounds(frc);
         //calc needed size
         boolean works = false;
-        int size=128;
+        size=128;
         do {
             int x=0; int y=0;
             int currHeight=0;
             for(int i=0;i<chars.length();i++) {
-                Rectangle2D bounds = awtFont.getStringBounds(chars, i, 1, null).getBounds2D();
+                Rectangle2D bounds = awtFont.getStringBounds(chars, i, i+1, frc).getBounds2D();
                 x += (int)bounds.getWidth();
                 int newHeight=currHeight;
                 if(currHeight<bounds.getHeight()) {
@@ -79,16 +83,17 @@ public class FontPackage {
         //build image
         charIndex = new char[chars.length()];
         charPosition = new Rectangle2D.Float[chars.length()];
-        fontTex = new BufferedImage(size, size, BufferedImage.TYPE_BYTE_GRAY);
+        fontTex = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = fontTex.createGraphics();
         g.setFont(awtFont);
         g.setBackground(new Color(0,0,0,0));
         g.clearRect(0, 0, size, size);
+        g.setColor(Color.WHITE);
         char[] charArr = chars.toCharArray();
         int x=0,y=0;
         int currHeight=0;
         for(int i=0;i<chars.length();i++) {
-            Rectangle2D bounds = awtFont.getStringBounds(chars, i, 1, null).getBounds2D();
+            Rectangle2D bounds = awtFont.getStringBounds(chars, i, i+1, frc).getBounds2D();
             int newHeight = currHeight;
             if (currHeight < bounds.getHeight()) {
                 newHeight += bounds.getHeight();
@@ -101,10 +106,19 @@ public class FontPackage {
             }
             g.drawChars(charArr, i, 1, x, y);
             charIndex[i] = chars.charAt(i);
-            charPosition[i] = new Rectangle2D.Float(x, y, (float)bounds.getWidth(), (float)bounds.getHeight());
+            charPosition[i] = new Rectangle2D.Float(x/(float)size, y/(float)size, (float)bounds.getWidth()/(float)size, (float)bounds.getHeight()/(float)size);
             x += (int)bounds.getWidth();
         }
         g.dispose();
         
+    }
+
+    Float getCharRect(char c) {
+        for(int i=0;i<charIndex.length;i++) {
+            if(charIndex[i]==c) {
+                return charPosition[i];
+            }
+        }
+        return new Float(0,0,0,0);
     }
 }

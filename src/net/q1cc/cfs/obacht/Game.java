@@ -25,9 +25,7 @@ import static org.lwjgl.opengl.GL30.*;
  */
 class Game {
     
-    
-    final static int collisionAntiAA = 2; 
-    
+        
     boolean pause = false;
     int fieldFrameBuffer;
     int fieldColorTexture;
@@ -67,10 +65,6 @@ class Game {
         glBindTexture(GL_TEXTURE_2D,0);
         glBindFramebuffer(GL_FRAMEBUFFER,fieldFrameBuffer);
         glViewport(0,0,fieldSize,fieldSize);
-        glEnable(GL_DEPTH_TEST);
-       
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         //glClearColor(0.0f,0.0f,0.0f,1.0f);
         //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
@@ -147,9 +141,8 @@ class Game {
             
         }
         
-        glDisable(GL_DEPTH_TEST);
+        glDepthFunc(GL_ALWAYS);
         glBindFramebuffer(GL_FRAMEBUFFER,0);
-        glBindTexture(GL_TEXTURE_2D,fieldColorTexture);
         
         if(playersAlive<=1) {
             //start new round
