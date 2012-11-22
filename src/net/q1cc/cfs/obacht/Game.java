@@ -131,8 +131,9 @@ class Game {
             
             int passed = glGetQueryObjectui(occQ,GL_QUERY_RESULT);
             glDeleteQueries(occQ);
-            if(passed>7){
+            if(passed>8){
                 //collide!
+                System.out.println(p.toString()+": "+passed);
                 p.die();
             } else {
                 alivePlayer = p;
@@ -155,7 +156,9 @@ class Game {
     }
 
     void inputLogic(double deltaTime) {
-
+        if(pause) {
+            return;
+        }
         for (Player p : players) {
             p.lastAngle = p.angle;
             if (p.leftDown) {

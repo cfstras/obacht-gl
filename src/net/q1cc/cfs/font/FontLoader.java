@@ -49,8 +49,8 @@ public class FontLoader {
     }
    
    public void loadFont() {
-       font = new FontPackage("Fleftex Mono","/res/Fleftex_M.ttf",30);
-       font.buildFont("abcdefghijklmnopqrstuvwxyzäöüABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ \"\\/()[]{}=?!.,:;-_+&%$<>|ß");
+       font = new FontPackage("Fleftex Mono","/res/Fleftex_M.ttf",16);
+       font.buildFont("abcdefghijklmnopqrstuvwxyzäöüABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ1234567890 \"\\/()[]{}=?!.,:;-_+&%$<>|ß");
        
        fontTexID = glGenTextures();
        glBindTexture(GL_TEXTURE_2D, fontTexID);
@@ -63,7 +63,7 @@ public class FontLoader {
        loaded=font.loaded;
    }
    
-   public void drawString(String s, Matrix4f trans) {
+   public void drawString(String s, Matrix4f trans,float size) {
        if(!loaded) {
            System.out.println("error: font not loaded, tried to draw string "+s);
            return;
@@ -74,21 +74,22 @@ public class FontLoader {
        matBuf.clear();
        trans.store(matBuf);
        matBuf.flip();
-       glColor4f(1,1,1,1);
+       //glColor4f(1,1,1,1);
        glLoadMatrix(matBuf);
        glBegin(GL_TRIANGLES);
+       size *= font.size/font.fontSize;
        float x=0;
        for(int i=0;i<s.length();i++) {
            char c = s.charAt(i);
            Rectangle2D.Float rect = font.getCharRect(c);
-           glTexCoord2f(rect.x           , rect.y            ); glVertex3f(x  , 0, 1);
-           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(x  ,-rect.height, 1);
-           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(x+rect.width, 0, 1);
+           glTexCoord2f(rect.x           , rect.y            ); glVertex3f(x, 0, 1);
+           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(x, -rect.height*size, 1);
+           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(x+rect.width*size, 0, 1);
            
-           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(x+rect.width, 0, 1);
-           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(x  ,-rect.height, 1);
-           glTexCoord2f(rect.x+rect.width, rect.y+rect.height); glVertex3f(x+rect.width,-rect.height, 1);
-           x+=rect.width;
+           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(x+rect.width*size, 0, 1);
+           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(x, -rect.height*size, 1);
+           glTexCoord2f(rect.x+rect.width, rect.y+rect.height); glVertex3f(x+rect.width*size, -rect.height*size, 1);
+           x+=rect.width*size;
        }
        glEnd();
        glPopMatrix();

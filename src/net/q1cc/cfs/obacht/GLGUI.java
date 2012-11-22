@@ -50,6 +50,7 @@ class GLGUI {
     int fieldSize;
     double fps;
     double timeToWait;
+    double nameGrowTime = 0.7f;
     double targetFPS = 60;
     double timeSpeed = 1.0;
     double startTime;
@@ -64,7 +65,7 @@ class GLGUI {
     int windowX;
     int windowY;
     DisplayMode dm;
-    private boolean DEBUG=true;
+    private boolean DEBUG=false;
     
     FontLoader font;
     
@@ -119,17 +120,17 @@ class GLGUI {
             draw();
             time = Sys.getTime()/(double)Sys.getTimerResolution();
             frameCounter++;
-            if(frameCounter>10) {
+            if(frameCounter>40) {
                 fps = (frameCounter/((float)(time-lastFPSTime))) *0.8+fps*0.2;
                 frameCounter=0; lastFPSTime=time;
-                Display.setTitle("Obacht! fps: "+((int)(fps*100)/100.0f)+" time: "+(int)((time-startTime)*1000)/1000.0 + " delta: "+deltaTime);
+                //Display.setTitle("Obacht!");// fps: "+((int)(fps*100)/100.0f)+" time: "+(int)((time-startTime)*1000)/1000.0 + " delta: "+deltaTime);
             }
             double waitTime = (double)(1.0/targetFPS)-(time-lastFrameTime);
             if(waitTime>0) { //only sleep if we would sleep more than 10 msecs
                 try {
                     Thread.sleep((int)(waitTime*1000));//30 fps
                 } catch (InterruptedException ex) {}
-                timeToWait=timeToWait*0.8f+(waitTime)*0.2f;
+                timeToWait=timeToWait*0.9f+(waitTime)*0.1f;
             }
             time = Sys.getTime()/(double)Sys.getTimerResolution();
             deltaTime = (time-lastFrameTime)*timeSpeed;
@@ -146,7 +147,7 @@ class GLGUI {
     private void draw() {
         // get Graphics
         glViewport(0,0,windowX,windowY);
-        glClearColor(0.3f,0.3f,0.3f,1.0f);
+        glClearColor(0.5f,0.5f,0.5f,1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         
         //draw field
@@ -215,64 +216,47 @@ class GLGUI {
         
     }
     private void drawHUD() {
-        /*glPushMatrix();
-        glLoadIdentity();
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D,font.fontTexID);
-        glBegin(GL_TRIANGLE_STRIP);
-        glColor4f(1,1,1,1);
-        glTexCoord2f(0,0); glVertex2f(-1,1);
-        glTexCoord2f(0,1); glVertex2f(-1,-1);
-        glTexCoord2f(1,0); glVertex2f(1,1);
-        glTexCoord2f(1,1); glVertex2f(1,-1);
-        glEnd();
-        glDisable(GL_TEXTURE_2D);
-        glPopMatrix();*/
+        float fontSize = 35.0f;
+        int hudXSize = windowRightBorder-hudLeftBorder-hudRightBorder;
+        int hudYSize = windowY-windowTopBorder-windowBotBorder-hudTopBorder-hudBotBorder;
+        glViewport(windowLeftBorder+fieldSize+hudLeftBorder, windowBotBorder+hudBotBorder, hudXSize, hudYSize);
         Matrix4f mat = new Matrix4f();
-        //mat = mat.translate(new Vector3f(-1.0f,1.0f,0.0f));
+        mat = mat.translate(new Vector3f(-1.0f,1.0f,0.0f));
         //mat = mat.scale(new Vector3f(1.0f/windowX, 1.0f/windowY, 1.0f));
-        mat = mat.scale(new Vector3f(1.0f, 1.0f, 1.0f));
-        font.drawString("omgwtf", mat);
+        mat = mat.scale(new Vector3f(1.0f/hudXSize, 1.0f/hudYSize, 1.0f));
+        font.drawString("Player Scores:", mat,fontSize);
+        mat = mat.translate(new Vector3f(0,-fontSize*2,0));
         
-        //TODO all this crap
-//        int xoff = windowLeftBorder+fieldSize+hudLeftBorder;
-//        int yoff = windowTopBorder+hudTopBorder;
-//        g.setClip(xoff, yoff, (windowX-hudRightBorder)-xoff, (windowX-hudBotBorder)-yoff);
-//        //g.setTransform(AffineTransform.getTranslateInstance(xoff, yoff));
-//        Font font = new Font("Verdana",Font.PLAIN,20);
-//        g.setFont(font);
-//        g.setColor(Color.WHITE);
-//        for(Player p:game.players) {
-//            g.setColor(p.color);
-//            float fontsize = 15.0f;
-//            if(p.lastScoreTime+700>time) {
-//                fontsize += (0.7f-(time-p.lastScoreTime)/1000.0f)*20.0f;
-//            }
-//            font=font.deriveFont(fontsize);
-//            g.setFont(font);
-//            yoff += font.getSize();
-//            g.drawString(p.name+": "+p.score, xoff, yoff);
-//        }
-//        yoff += font.getSize()*2;
-//        font=font.deriveFont(15.0f);
-//        g.setFont(font);
-//        g.setColor(Color.WHITE);
-//        if(!game.pause) g.drawString("SPACE = pause", xoff, yoff);
-//        else if(game.waitingForNewRound) g.drawString("SPACE = restart", xoff, yoff);
-//        else g.drawString("SPACE = unpause", xoff, yoff);
-//        yoff += font.getSize()*2;
-//        
-//        g.setColor(Color.LIGHT_GRAY);
-//        font=font.deriveFont(9.0f);
-//        g.setFont(font);
-//        g.drawString("fps: "+Math.floor(fps*100)/100, xoff, yoff);
-//        yoff += font.getSize()*2;
-//        g.drawString("delta: "+Math.floor(deltaTime*1000)/1000, xoff, yoff);
-//        yoff += font.getSize()*2;
-//        g.drawString("frameWait: "+Math.floor(timeToWait*100)/100, xoff, yoff);
-//        yoff += font.getSize()*2;
-//        g.drawString("waitFactor: "+Math.floor(waitFactor*100)/100, xoff, yoff);
-//        g.setClip(0,0,windowX,windowY);
+        for(Player p:game.players) {
+            glColor3ub((byte)p.color.getRed(), (byte)p.color.getGreen(), (byte)p.color.getBlue());
+            float fontTmp = fontSize;
+            if (p.lastScoreTime + nameGrowTime > time) {
+                fontTmp += (Math.sin(Math.PI*(time - p.lastScoreTime)/(nameGrowTime/2) - 0.5*Math.PI)+1)*fontSize*0.7f;
+            }
+            font.drawString(p.name+": "+p.score, mat,fontTmp);
+            mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
+        }
+        glColor3f(1, 1, 1);
+        mat = mat.translate(new Vector3f(0,-fontSize,0));
+        
+        String status;
+        if(!game.pause) status="pause";
+        else if(game.waitingForNewRound) status="new game";
+        else status="unpause";
+        font.drawString("SPACE = "+status, mat, fontSize);
+        mat = mat.translate(new Vector3f(0,-fontSize*2,0));
+        
+        glColor3f(0.15f, 0.15f, 0.15f);
+        fontSize=20.0f;
+        font.drawString("fps: "+Math.floor(fps*100)/100, mat, fontSize);
+        mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
+        font.drawString("frameWait: "+Math.floor(timeToWait*1000000)/100, mat, fontSize);
+        mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
+        font.drawString("time: "+Math.floor((time-startTime)*100)/100, mat, fontSize);
+        mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
+        font.drawString("delta: "+Math.floor((deltaTime)*100000)/100, mat, fontSize);
+        
+        glViewport(0,0,windowX,windowY);
     }
 
     private void doInput() {
@@ -316,5 +300,21 @@ class GLGUI {
     private void loadStuff() {
         font = new FontLoader();
         font.loadFont();
+    }
+    
+    private void drawTexture(int id) {
+        glPushMatrix();
+        glLoadIdentity();
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D,id);
+        glBegin(GL_TRIANGLE_STRIP);
+        glColor4f(1,1,1,1);
+        glTexCoord2f(0,0); glVertex2f(-1,1);
+        glTexCoord2f(0,1); glVertex2f(-1,-1);
+        glTexCoord2f(1,0); glVertex2f(1,1);
+        glTexCoord2f(1,1); glVertex2f(1,-1);
+        glEnd();
+        glDisable(GL_TEXTURE_2D);
+        glPopMatrix();
     }
 }

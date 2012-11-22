@@ -15,7 +15,7 @@ import org.lwjgl.input.Keyboard;
 class Player {
     
     static int lastAlivePoints = 3;
-    static int collidePoints = -1;
+    static int collidePoints = 0;
     
     Vec2 pos;
     float speed;

@@ -31,6 +31,7 @@ public class FontPackage {
     
     BufferedImage fontTex;
     int size;
+    float fontSize;
     
     char[] charIndex;
     Rectangle2D.Float[] charPosition;
@@ -38,6 +39,7 @@ public class FontPackage {
     public FontPackage(String fontName, String fileName, float size) {
         this.fontName = fontName;
         this.fileName = fileName;
+        this.fontSize = size;
         try {
             awtFont = Font.createFont(Font.TRUETYPE_FONT, this.getClass().getResourceAsStream(fileName)).deriveFont(size);
             loaded=true;
@@ -55,7 +57,7 @@ public class FontPackage {
         Rectangle2D maxCharBounds = awtFont.getMaxCharBounds(frc);
         //calc needed size
         boolean works = false;
-        size=128;
+        size=16;
         int line1Height=0;
         do {
             int x=0; int y=0;
@@ -98,6 +100,7 @@ public class FontPackage {
         int currHeight=0;
         for(int i=0;i<chars.length();i++) {
             Rectangle2D bounds = awtFont.getStringBounds(chars, i, i+1, frc).getBounds2D();
+            float descent = awtFont.getLineMetrics(chars, i, i+1, frc).getDescent();
             int newHeight = currHeight;
             if (currHeight < bounds.getHeight()) {
                 newHeight += bounds.getHeight();
@@ -108,7 +111,7 @@ public class FontPackage {
             } else {
                 currHeight = newHeight;
             }
-            g.drawChars(charArr, i, 1, x, y);
+            g.drawChars(charArr, i, 1, x, (int)(y-descent));
             charIndex[i] = chars.charAt(i);
             charPosition[i] = new Rectangle2D.Float(x/(float)size, (y-(float)bounds.getHeight())/(float)size, (float)bounds.getWidth()/(float)size, (float)bounds.getHeight()/(float)size);
             x += (int)bounds.getWidth();
