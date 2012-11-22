@@ -56,6 +56,7 @@ public class FontPackage {
         //calc needed size
         boolean works = false;
         size=128;
+        int line1Height=0;
         do {
             int x=0; int y=0;
             int currHeight=0;
@@ -67,6 +68,9 @@ public class FontPackage {
                     newHeight+= bounds.getHeight();
                 }
                 if(x>=size) {
+                    if(y==0) {
+                        line1Height=currHeight;
+                    }
                     y += currHeight;
                     x = (int)bounds.getWidth();
                 } else {
@@ -90,7 +94,7 @@ public class FontPackage {
         g.clearRect(0, 0, size, size);
         g.setColor(Color.WHITE);
         char[] charArr = chars.toCharArray();
-        int x=0,y=0;
+        int x=0,y=line1Height;
         int currHeight=0;
         for(int i=0;i<chars.length();i++) {
             Rectangle2D bounds = awtFont.getStringBounds(chars, i, i+1, frc).getBounds2D();
@@ -106,7 +110,7 @@ public class FontPackage {
             }
             g.drawChars(charArr, i, 1, x, y);
             charIndex[i] = chars.charAt(i);
-            charPosition[i] = new Rectangle2D.Float(x/(float)size, y/(float)size, (float)bounds.getWidth()/(float)size, (float)bounds.getHeight()/(float)size);
+            charPosition[i] = new Rectangle2D.Float(x/(float)size, (y-(float)bounds.getHeight())/(float)size, (float)bounds.getWidth()/(float)size, (float)bounds.getHeight()/(float)size);
             x += (int)bounds.getWidth();
         }
         g.dispose();
@@ -119,6 +123,6 @@ public class FontPackage {
                 return charPosition[i];
             }
         }
-        return new Float(0,0,0,0);
+        throw new NullPointerException("tried to draw char that is not in texture.");
     }
 }

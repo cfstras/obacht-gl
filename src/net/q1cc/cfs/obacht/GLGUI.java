@@ -115,7 +115,7 @@ class GLGUI {
         while(running){
             doInput();
             game.inputLogic(deltaTime);
-            //game.gameLogic(deltaTime,time);
+            game.gameLogic(deltaTime,time);
             draw();
             time = Sys.getTime()/(double)Sys.getTimerResolution();
             frameCounter++;
@@ -152,7 +152,7 @@ class GLGUI {
         //draw field
         
         glViewport(windowLeftBorder, windowBotBorder, fieldSize, fieldSize);
-        //drawField();
+        drawField();
         glViewport(0,0,windowX,windowY);
         drawBorder();
         //gui!
@@ -215,11 +215,24 @@ class GLGUI {
         
     }
     private void drawHUD() {
+        /*glPushMatrix();
+        glLoadIdentity();
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D,font.fontTexID);
+        glBegin(GL_TRIANGLE_STRIP);
+        glColor4f(1,1,1,1);
+        glTexCoord2f(0,0); glVertex2f(-1,1);
+        glTexCoord2f(0,1); glVertex2f(-1,-1);
+        glTexCoord2f(1,0); glVertex2f(1,1);
+        glTexCoord2f(1,1); glVertex2f(1,-1);
+        glEnd();
+        glDisable(GL_TEXTURE_2D);
+        glPopMatrix();*/
         Matrix4f mat = new Matrix4f();
         //mat = mat.translate(new Vector3f(-1.0f,1.0f,0.0f));
         //mat = mat.scale(new Vector3f(1.0f/windowX, 1.0f/windowY, 1.0f));
-        mat = mat.scale(new Vector3f(0.2f, 0.2f, 1.0f));
-        font.drawString("A", mat);
+        mat = mat.scale(new Vector3f(1.0f, 1.0f, 1.0f));
+        font.drawString("omgwtf", mat);
         
         //TODO all this crap
 //        int xoff = windowLeftBorder+fieldSize+hudLeftBorder;

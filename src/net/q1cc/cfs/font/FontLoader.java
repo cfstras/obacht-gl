@@ -33,7 +33,7 @@ public class FontLoader {
     
     
    public FontPackage font;
-   int fontTexID;
+   public int fontTexID;
    ComponentColorModel colorModel;
    boolean loaded;
    FloatBuffer matBuf;
@@ -77,16 +77,18 @@ public class FontLoader {
        glColor4f(1,1,1,1);
        glLoadMatrix(matBuf);
        glBegin(GL_TRIANGLES);
+       float x=0;
        for(int i=0;i<s.length();i++) {
            char c = s.charAt(i);
            Rectangle2D.Float rect = font.getCharRect(c);
-           glTexCoord2f(rect.x           , rect.y            ); glVertex3f(i  , 0, 1);
-           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(i  ,-1, 1);
-           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(i+1, 0, 1);
+           glTexCoord2f(rect.x           , rect.y            ); glVertex3f(x  , 0, 1);
+           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(x  ,-rect.height, 1);
+           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(x+rect.width, 0, 1);
            
-           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(i+1, 0, 1);
-           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(i  ,-1, 1);
-           glTexCoord2f(rect.x+rect.width, rect.y+rect.height); glVertex3f(i+1,-1, 1);
+           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(x+rect.width, 0, 1);
+           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(x  ,-rect.height, 1);
+           glTexCoord2f(rect.x+rect.width, rect.y+rect.height); glVertex3f(x+rect.width,-rect.height, 1);
+           x+=rect.width;
        }
        glEnd();
        glPopMatrix();
