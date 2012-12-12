@@ -25,7 +25,6 @@ import static org.lwjgl.opengl.GL30.*;
  */
 class Game {
     
-        
     boolean pause = false;
     int fieldFrameBuffer;
     int fieldColorTexture;
@@ -51,10 +50,7 @@ class Game {
         newRound();
     }
     
-    double deltaTime;
-
-    void gameLogic(double deltaTime, double time) {
-        this.deltaTime = deltaTime;
+    void gameLogic() {
         if(pause) {
             return;
         }
@@ -71,15 +67,15 @@ class Game {
         int playersAlive=0;
         Player alivePlayer=null;
         for (Player p : players) {
-            if(!p.alive) continue;
+            if(!p.alive) {
+                continue;
+            }
             Vec2 pos = p.pos;
             Vec2 newpos = new Vec2();
-            Vec2 direction = new Vec2();
-            direction.x = pos.x + (float) (Math.sin(p.angle) * p.speed * deltaTime);
-            direction.y = pos.y - (float) (Math.cos(p.angle) * p.speed * deltaTime);
-            newpos.add(direction);
-            Vec2 cpos = new Vec2(newpos.x, newpos.y);
-            cpos.wrap();
+            newpos.x = pos.x + (float) (Math.sin(p.angle) * p.speed * Time.deltaTime);
+            newpos.y = pos.y - (float) (Math.cos(p.angle) * p.speed * Time.deltaTime);
+            Vec2 lastPos = p.lastPos;
+            
             
             DoubleBuffer verts = BufferUtils.createDoubleBuffer(4*3);
             float anglet = p.angle + 0.5f * (float) Math.PI;
@@ -103,16 +99,13 @@ class Game {
             verts.put(0.5);
             verts.flip();
             
-            newpos.wrap();//field wrap
-            p.pos = newpos;
-            
             //collision detection
             int occQ = glGenQueries();
             glBeginQuery(GL_SAMPLES_PASSED, occQ);
             
             glDepthFunc(GL_LESS); //set z-buffer to discard anything wich has already been drawn
             //glEnable(GL_RASTERIZER_DISCARD);
-            glColor4f(0,1,0,0.0f);
+            glColor4f(0,1,0,1.0f);
             glEnableClientState(GL_VERTEX_ARRAY);
             glVertexPointer(3,0,verts);
             GLGUI.checkError();
@@ -120,18 +113,48 @@ class Game {
             GLGUI.checkError();
             
             glEndQuery(GL_SAMPLES_PASSED);
+            
             //now draw again
+            
+            DoubleBuffer dverts = BufferUtils.createDoubleBuffer(4*3);
+            anglet = p.lastAngle + 0.5f * (float) Math.PI;
+            langlet = p.lastLastAngle + 0.5f * (float) Math.PI;
+            width = p.width;
+            dverts.put((pos.x + sin(anglet) * width));//*2-1);
+            dverts.put((pos.y - cos(anglet) * width));//*2-1);
+            dverts.put(0.5);
+            
+            dverts.put((pos.x - sin(anglet) * width));//*2-1);
+            dverts.put((pos.y + cos(anglet) * width));//*2-1);
+            dverts.put(0.5);
+            //put pos back a little
+            lastPos.minus(Vec2.minus(pos,lastPos).mult(0.3f));
+            dverts.put((lastPos.x - sin(langlet) * width));//*2-1);
+            dverts.put((lastPos.y + cos(langlet) * width));//*2-1);
+            dverts.put(0.5);
+
+            dverts.put((lastPos.x + sin(langlet) * width));//*2-1);
+            dverts.put((lastPos.y - cos(langlet) * width));//*2-1);
+            dverts.put(0.5);
+            dverts.flip();  
+            
+            if(newpos.wrap()) {//field wrap
+                pos = newpos;
+            }
+            p.lastPos = pos;
+            p.pos = newpos;
+            
             glDepthFunc(GL_ALWAYS);
             //glDisable(GL_RASTERIZER_DISCARD);
-            verts.put(2,1).put(5,1).put(8,1).put(11,1);
-            glVertexPointer(3,0,verts);
+            dverts.put(2,1).put(5,1).put(8,1).put(11,1);
+            glVertexPointer(3,0,dverts);
             glColor4ub((byte)p.color.getRed(), (byte)p.color.getGreen(), (byte)p.color.getBlue(),(byte)255);
             //glColor3f(1.0f,1.0f,1.0f);
             glDrawArrays(GL_QUADS, 0, 4);
             
             int passed = glGetQueryObjectui(occQ,GL_QUERY_RESULT);
             glDeleteQueries(occQ);
-            if(passed>8){
+            if(passed>2){
                 //collide!
                 System.out.println(p.toString()+": "+passed);
                 p.die();
@@ -148,7 +171,7 @@ class Game {
         if(playersAlive<=1) {
             //start new round
             if(alivePlayer!=null) {
-                alivePlayer.lastAlive(time);
+                alivePlayer.lastAlive();
             }
             pause=true;
             waitingForNewRound=true;
@@ -160,6 +183,7 @@ class Game {
             return;
         }
         for (Player p : players) {
+            p.lastLastAngle = p.lastAngle;
             p.lastAngle = p.angle;
             if (p.leftDown) {
                 p.angle += deltaTime * p.turnSpeed * (float) Math.PI;

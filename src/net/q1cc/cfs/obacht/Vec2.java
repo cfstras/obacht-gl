@@ -25,14 +25,26 @@ class Vec2 {
         x=cloneMe.x; y=cloneMe.y;
     }
 
-    void wrap() {
-        //x = x - 1.0f*(float)Math.floor(x/1.0f);
-        //y = y - 1.0f*(float)Math.floor(y/1.0f);
-        if(x> 1.0f) x -= 2.0f;
-        if(x<-1.0f) x += 2.0f;
+    boolean wrap() {
+        boolean a = false;
+        if(x > 1.0f) {
+            x -= 2.0f;
+            a = true;
+        }
+        if(x < -1.0f) {
+            x += 2.0f;
+            a = true;
+        }
         
-        if(y> 1.0f) y -= 2.0f;
-        if(y<-1.0f) y += 2.0f;
+        if(y > 1.0f) {
+            y -= 2.0f;
+            a = true;
+        }
+        if(y < -1.0f) {
+            y += 2.0f;
+            a = true;
+        }
+        return a;
     }
 
     Vec2 minus(Vec2 b) {

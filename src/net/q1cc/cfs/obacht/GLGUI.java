@@ -42,18 +42,12 @@ import org.lwjgl.util.vector.Vector3f;
 class GLGUI {
     Game game;
     boolean running = true;
-    double deltaTime = 1.0f/30;
-    double time;
-    double lastFrameTime;
+
     int frameCounter;
     double lastFPSTime;
+    
     int fieldSize;
-    double fps;
-    double timeToWait;
-    double nameGrowTime = 0.7f;
-    double targetFPS = 60;
-    double timeSpeed = 1.0;
-    double startTime;
+    
     int windowLeftBorder    = 10;
     int windowTopBorder     = 10;
     int windowRightBorder   = 80;
@@ -104,7 +98,8 @@ class GLGUI {
         
         loadStuff();
         
-        startTime = lastFPSTime = lastFrameTime = time = Sys.getTime()/(double)Sys.getTimerResolution();
+        Time.startTime = Time.lastFPSTime = Time.lastFrameTime = Time.time
+                = Sys.getTime()/(double)Sys.getTimerResolution();
         
         //some debug info
         System.out.println("Sys Timer value: "+Sys.getTime());
@@ -115,29 +110,29 @@ class GLGUI {
         game.init();
         while(running){
             doInput();
-            game.inputLogic(deltaTime);
-            game.gameLogic(deltaTime,time);
+            game.inputLogic(Time.deltaTime);
+            game.gameLogic();
             draw();
-            time = Sys.getTime()/(double)Sys.getTimerResolution();
+            Time.time = Sys.getTime()/(double)Sys.getTimerResolution();
             frameCounter++;
             if(frameCounter>40) {
-                fps = (frameCounter/((float)(time-lastFPSTime))) *0.8+fps*0.2;
-                frameCounter=0; lastFPSTime=time;
+                Time.fps = (frameCounter/((float)(Time.time-lastFPSTime))) *0.8+Time.fps*0.2;
+                frameCounter=0; lastFPSTime=Time.time;
                 //Display.setTitle("Obacht!");// fps: "+((int)(fps*100)/100.0f)+" time: "+(int)((time-startTime)*1000)/1000.0 + " delta: "+deltaTime);
             }
-            double waitTime = (double)(1.0/targetFPS)-(time-lastFrameTime);
+            double waitTime = (double)(1.0/Time.targetFPS)-(Time.time-Time.lastFrameTime);
             if(waitTime>0) { //only sleep if we would sleep more than 10 msecs
                 try {
                     Thread.sleep((int)(waitTime*1000));//30 fps
                 } catch (InterruptedException ex) {}
-                timeToWait=timeToWait*0.9f+(waitTime)*0.1f;
+                Time.timeToWait=Time.timeToWait*0.9f+(waitTime)*0.1f;
             }
-            time = Sys.getTime()/(double)Sys.getTimerResolution();
-            deltaTime = (time-lastFrameTime)*timeSpeed;
+            Time.time = Sys.getTime()/(double)Sys.getTimerResolution();
+            Time.deltaTime = (Time.time-Time.lastFrameTime)*Time.speed;
             if(DEBUG) {
-                deltaTime = 0.016f;
+                Time.deltaTime = 0.016f;
             }
-            lastFrameTime = time;
+            Time.lastFrameTime = Time.time;
             
             if(Display.isCloseRequested()) running=false;
         }
@@ -200,18 +195,7 @@ class GLGUI {
         glEnd();
         glDisable(GL_TEXTURE_2D);
         for(Player p: game.players){
-            glColor4ub((byte)p.color.getRed(),(byte)p.color.getGreen(),(byte)p.color.getBlue(),(byte)255); //TODO make the head blink?
-            glPushMatrix();
-            glTranslatef(p.pos.x,p.pos.y,0);
-            glBegin(GL_TRIANGLE_FAN);
-            glVertex2f(0,0);
-            for(int i=0;i<17;i++) {
-                float x = (float)Math.cos(2*Math.PI*i/16.0f)*p.width*1.5f;
-                float y = (float)Math.sin(2*Math.PI*i/16.0f)*p.width*1.5f;
-                glVertex2f(x,y);
-            }
-            glEnd();
-            glPopMatrix();
+            p.drawHead();
         }
         
     }
@@ -230,8 +214,10 @@ class GLGUI {
         for(Player p:game.players) {
             glColor3ub((byte)p.color.getRed(), (byte)p.color.getGreen(), (byte)p.color.getBlue());
             float fontTmp = fontSize;
-            if (p.lastScoreTime + nameGrowTime > time) {
-                fontTmp += (Math.sin(Math.PI*(time - p.lastScoreTime)/(nameGrowTime/2) - 0.5*Math.PI)+1)*fontSize*0.7f;
+            if (p.lastScoreTime + Settings.scoreNameWinGrowTime > Time.time) {
+                fontTmp += (Math.sin(Math.PI*(Time.time - p.lastScoreTime)
+                        / (Settings.scoreNameWinGrowTime/2)
+                        - 0.5*Math.PI)+1)*fontSize*0.7f;
             }
             font.drawString(p.name+": "+p.score, mat,fontTmp);
             mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
@@ -248,13 +234,16 @@ class GLGUI {
         
         glColor3f(0.15f, 0.15f, 0.15f);
         fontSize=20.0f;
-        font.drawString("fps: "+Math.floor(fps*100)/100, mat, fontSize);
+        font.drawString("fps: "+Math.floor(Time.fps*100)/100, mat, fontSize);
         mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
-        font.drawString("frameWait: "+Math.floor(timeToWait*1000000)/100, mat, fontSize);
+        font.drawString("frameWait: "+Math.floor(Time.timeToWait*1000000)/100,
+                mat, fontSize);
         mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
-        font.drawString("time: "+Math.floor((time-startTime)*100)/100, mat, fontSize);
+        font.drawString("time: "+Math.floor((Time.time-Time.startTime)*100)/100,
+                mat, fontSize);
         mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
-        font.drawString("delta: "+Math.floor((deltaTime)*100000)/100, mat, fontSize);
+        font.drawString("delta: "+Math.floor((Time.deltaTime)*100000)/100, mat,
+                fontSize);
         
         glViewport(0,0,windowX,windowY);
     }
