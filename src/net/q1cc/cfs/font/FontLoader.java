@@ -18,6 +18,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.Hashtable;
+import net.q1cc.cfs.obacht.Settings;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.MemoryUtil;
 import static org.lwjgl.opengl.GL11.*;
@@ -49,7 +50,7 @@ public class FontLoader {
     }
    
    public void loadFont() {
-       font = new FontPackage("Fleftex Mono","/res/Fleftex_M.ttf",16);
+       font = new FontPackage("Fleftex Mono","/res/Fleftex_M.ttf",Settings.fontQuality);
        font.buildFont("abcdefghijklmnopqrstuvwxyzäöüABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ1234567890 \"\\/()[]{}=?!.,:;-_+&%$<>|ß");
        
        fontTexID = glGenTextures();

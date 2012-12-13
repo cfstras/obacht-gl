@@ -86,9 +86,17 @@ public class FontPackage {
             }
         } while (!works);
         
+        //calculate array size for chars
+        int charIndexLength = 128; // ascii
+        for(char c : chars.toCharArray()) {
+            if(c > '~' || c < '!') { // these are all non-ascii chars
+                charIndexLength++;
+            }
+        }
+        charIndex = new char[charIndexLength];
+        charPosition = new Rectangle2D.Float[charIndexLength];
+        
         //build image
-        charIndex = new char[chars.length()];
-        charPosition = new Rectangle2D.Float[chars.length()];
         fontTex = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = fontTex.createGraphics();
         g.setFont(awtFont);
@@ -98,9 +106,11 @@ public class FontPackage {
         char[] charArr = chars.toCharArray();
         int x=0,y=line1Height;
         int currHeight=0;
+        int extraCharsI = 0;
         for(int i=0;i<chars.length();i++) {
-            Rectangle2D bounds = awtFont.getStringBounds(chars, i, i+1, frc).getBounds2D();
-            float descent = awtFont.getLineMetrics(chars, i, i+1, frc).getDescent();
+            char c = charArr[i];
+            Rectangle2D bounds = awtFont.getStringBounds(charArr, i, i+1, frc).getBounds2D();
+            float descent = awtFont.getLineMetrics(charArr, i, i+1, frc).getDescent();
             int newHeight = currHeight;
             if (currHeight < bounds.getHeight()) {
                 newHeight += bounds.getHeight();
@@ -112,8 +122,15 @@ public class FontPackage {
                 currHeight = newHeight;
             }
             g.drawChars(charArr, i, 1, x, (int)(y-descent));
-            charIndex[i] = chars.charAt(i);
-            charPosition[i] = new Rectangle2D.Float(x/(float)size, (y-(float)bounds.getHeight())/(float)size, (float)bounds.getWidth()/(float)size, (float)bounds.getHeight()/(float)size);
+            
+            //get position
+            int pos = c;
+            if(c > '~' || c < '!') { // these are all non-ascii chars
+                pos = extraCharsI + 128;
+                extraCharsI++;
+            }
+            charIndex[pos] = c;
+            charPosition[pos] = new Rectangle2D.Float(x/(float)size, (y-(float)bounds.getHeight())/(float)size, (float)bounds.getWidth()/(float)size, (float)bounds.getHeight()/(float)size);
             x += (int)bounds.getWidth();
         }
         g.dispose();
@@ -121,11 +138,15 @@ public class FontPackage {
     }
 
     Float getCharRect(char c) {
-        for(int i=0;i<charIndex.length;i++) {
-            if(charIndex[i]==c) {
-                return charPosition[i];
+        if (c > '~' || c < '!') { // these are all non-ascii chars
+            for (int i = 0; i < charIndex.length; i++) {
+                if (charIndex[i] == c) {
+                    return charPosition[i];
+                }
             }
+            throw new NullPointerException("tried to draw char that is not in texture.");
+        } else {
+            return charPosition[c];
         }
-        throw new NullPointerException("tried to draw char that is not in texture.");
     }
 }

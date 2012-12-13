@@ -11,12 +11,13 @@ package net.q1cc.cfs.obacht;
 public class Settings {
     
     //internal settings
-    public static int playerLastAlivePoints = 1;
-    public static int collidePoints = 0;
     public static float playerDeathFadeTime = 0.7f;
     public static float scoreNameWinGrowTime = 0.7f;
-    
+    public static float fontQuality = 24;
     
     //public settings
+    public static float hudFontSize = 30;
+    public static int playerLastAlivePoints = 1;
+    public static int collidePoints = 0;
     
 }

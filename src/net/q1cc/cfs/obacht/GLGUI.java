@@ -4,6 +4,8 @@
  */
 package net.q1cc.cfs.obacht;
 
+import java.awt.BorderLayout;
+import java.awt.Canvas;
 import org.lwjgl.util.glu.GLU;
 import java.nio.ByteBuffer;
 import java.awt.image.DataBuffer;
@@ -12,14 +14,23 @@ import java.awt.image.BufferedImage;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.opengl.DisplayMode;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.RenderingHints;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowFocusListener;
+import java.awt.event.WindowListener;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferStrategy;
 import java.nio.FloatBuffer;
+import java.util.concurrent.atomic.AtomicReference;
 import net.q1cc.cfs.font.FontLoader;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.Sys;
@@ -39,7 +50,7 @@ import org.lwjgl.util.vector.Vector3f;
  *
  * @author claus
  */
-class GLGUI {
+class GLGUI implements ComponentListener, WindowFocusListener, WindowListener {
     Game game;
     boolean running = true;
 
@@ -50,7 +61,7 @@ class GLGUI {
     
     int windowLeftBorder    = 10;
     int windowTopBorder     = 10;
-    int windowRightBorder   = 80;
+    int windowRightBorder   = 200;
     int windowBotBorder     = 10;
     int hudLeftBorder       = 10;
     int hudTopBorder        = 10;
@@ -62,31 +73,35 @@ class GLGUI {
     private boolean DEBUG=false;
     
     FontLoader font;
+    Frame frame;
+    Canvas canvas;
+    private final static AtomicReference<Dimension> newCanvasSize = new AtomicReference<Dimension>();
     
     public GLGUI(Game game) throws LWJGLException {
         this.game=game;
         fieldSize = game.fieldSize;
+        
+        frame = new Frame("Obacht!");
+        frame.setLayout(new BorderLayout());
+        canvas = new Canvas();
+        canvas.addComponentListener(this);
+        frame.addWindowFocusListener(this);
+        frame.addWindowListener(this);
+        frame.add(canvas, BorderLayout.CENTER);
+        
         Display.setTitle("Obacht!");
         windowX = fieldSize+windowLeftBorder+windowRightBorder;
         windowY = fieldSize+windowTopBorder+windowBotBorder;
+
         
-        DisplayMode[] dms = Display.getAvailableDisplayModes();
-        for(DisplayMode d : dms){
-            if (dm==null){dm = d;}
-            if (dm.getWidth() < windowX && d.getWidth()>dm.getWidth())
-                dm=d;
-            if (dm.getHeight() < windowY && d.getHeight()>dm.getHeight())
-                dm=d;
-            if (dm.getWidth()==d.getWidth() && dm.getHeight()==d.getHeight() && d.getFrequency()>dm.getFrequency())
-                dm=d;
-        }
-        windowX = dm.getWidth(); windowY = dm.getHeight();
-        windowRightBorder = windowX - fieldSize-windowLeftBorder;
-        windowBotBorder = windowY - fieldSize-windowTopBorder;
-        Display.setDisplayMode(dm);
-        System.out.println("displaymode: "+dm);
         Display.setSwapInterval(1);
+        Display.setParent(canvas);
         Display.setVSyncEnabled(true);
+        canvas.setPreferredSize(new Dimension(windowX, windowY));
+        frame.setMinimumSize(new Dimension(windowX, windowY));
+        frame.pack();
+        frame.setVisible(true);
+        
         Display.create();
         Display.makeCurrent();
         glViewport(0,0,windowX,windowY);
@@ -108,7 +123,18 @@ class GLGUI {
     
     public void run() {
         game.init();
+        Dimension newDim;
         while(running){
+            
+            newDim =newCanvasSize.getAndSet(null);
+            if(newDim!=null) {
+                windowX = newDim.width;
+                windowY = newDim.height;
+                windowRightBorder = windowX - fieldSize - windowLeftBorder;
+                windowBotBorder = windowY - fieldSize - windowTopBorder;
+                glViewport(0,0,windowX, windowY);
+            }
+            
             doInput();
             game.inputLogic(Time.deltaTime);
             game.gameLogic();
@@ -137,6 +163,7 @@ class GLGUI {
             if(Display.isCloseRequested()) running=false;
         }
         Display.destroy();
+        frame.dispose();
     }
         
     private void draw() {
@@ -200,7 +227,7 @@ class GLGUI {
         
     }
     private void drawHUD() {
-        float fontSize = 35.0f;
+        float fontSize = Settings.hudFontSize;
         int hudXSize = windowRightBorder-hudLeftBorder-hudRightBorder;
         int hudYSize = windowY-windowTopBorder-windowBotBorder-hudTopBorder-hudBotBorder;
         glViewport(windowLeftBorder+fieldSize+hudLeftBorder, windowBotBorder+hudBotBorder, hudXSize, hudYSize);
@@ -305,5 +332,72 @@ class GLGUI {
         glEnd();
         glDisable(GL_TEXTURE_2D);
         glPopMatrix();
+    }
+
+    @Override
+    public void componentResized(ComponentEvent e) {
+        newCanvasSize.set(canvas.getSize());
+    }
+
+    @Override
+    public void componentMoved(ComponentEvent e) {
+    }
+
+    @Override
+    public void componentShown(ComponentEvent e) {
+    }
+
+    @Override
+    public void componentHidden(ComponentEvent e) {
+    }
+
+    @Override
+    public void windowGainedFocus(WindowEvent e) {
+        canvas.requestFocusInWindow();
+    }
+
+    @Override
+    public void windowLostFocus(WindowEvent e) {
+        windowDeactivated(e);
+    }
+
+    @Override
+    public void windowOpened(WindowEvent e) {
+        windowActivated(e);
+    }
+
+    @Override
+    public void windowClosing(WindowEvent e) {
+        running = false;
+        //TODO release resources?
+    }
+
+    @Override
+    public void windowClosed(WindowEvent e) {
+        running = false;
+    }
+
+    @Override
+    public void windowIconified(WindowEvent e) {
+        Time.targetFPS = 1;
+        game.pause=true;
+        
+    }
+
+    @Override
+    public void windowDeiconified(WindowEvent e) {
+        Time.targetFPS=60;
+        
+    }
+        
+    @Override
+    public void windowActivated(WindowEvent e) {
+        Time.targetFPS = 60;
+    }
+
+    @Override
+    public void windowDeactivated(WindowEvent e) {
+        Time.targetFPS=5;
+        game.pause=true;
     }
 }
