@@ -218,10 +218,9 @@ class Game {
 
     private void newRound() {
         fieldSize = Main.GAME_FIELD_SIZE;
-        
+        System.out.println("new game");
         //TODO delete old fb
         
-        // http://www.flashbang.se/archives/48
         fieldFrameBuffer = glGenFramebuffers();
         fieldColorTexture = glGenTextures();
         fieldRenderBuffer = glGenRenderbuffers();
