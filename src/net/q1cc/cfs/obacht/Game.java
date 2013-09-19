@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package net.q1cc.cfs.obacht;
 
 import java.nio.FloatBuffer;
@@ -34,11 +30,9 @@ class Game {
     int fieldSize;
     Color gameBackground = Color.BLACK;
     boolean waitingForNewRound=false;
-    int[] colorTempArray;
     
     public Game() {
         fieldSize = Main.GAME_FIELD_SIZE;
-        colorTempArray=new int[512];
     }
 
     void init() {
@@ -75,7 +69,6 @@ class Game {
             newpos.x = pos.x + (float) (Math.sin(p.angle) * p.speed * Time.deltaTime);
             newpos.y = pos.y - (float) (Math.cos(p.angle) * p.speed * Time.deltaTime);
             Vec2 lastPos = p.lastPos;
-            
             
             DoubleBuffer verts = BufferUtils.createDoubleBuffer(4*3);
             float anglet = p.angle + 0.5f * (float) Math.PI;
@@ -219,8 +212,18 @@ class Game {
     private void newRound() {
         fieldSize = Main.GAME_FIELD_SIZE;
         System.out.println("new game");
-        //TODO delete old fb
-        
+
+		//TODO delete old fb
+        if(fieldFrameBuffer != 0) {
+			glDeleteFramebuffers(fieldFrameBuffer);
+		}
+		if(fieldColorTexture != 0) {
+			glDeleteTextures(fieldColorTexture);
+		}
+		if(fieldRenderBuffer != 0) {
+			glDeleteRenderbuffers(0);
+		}
+
         fieldFrameBuffer = glGenFramebuffers();
         fieldColorTexture = glGenTextures();
         fieldRenderBuffer = glGenRenderbuffers();
@@ -229,7 +232,7 @@ class Game {
         glBindTexture(GL_TEXTURE_2D,fieldColorTexture);
         glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, fieldSize, fieldSize, 0,GL_RGBA, GL_UNSIGNED_BYTE, (ByteBuffer)null);
-        
+        //TODO for multisampling, check here, too
         glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,fieldColorTexture,0);
         
         // create a render buffer as our depth buffer and attach it
@@ -246,7 +249,7 @@ class Game {
         glClearDepth(0.0);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         
-        drawEdgeDebug();
+        //drawEdgeDebug();
         
         // Go back to regular frame buffer rendering
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

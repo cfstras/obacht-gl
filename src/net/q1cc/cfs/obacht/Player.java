@@ -76,12 +76,13 @@ class Player {
         pos.x = Main.r.nextFloat()*0.6f+0.2f;
         pos.y = Main.r.nextFloat()*0.6f+0.2f;
         lastPos = pos;
-        speed = 0.2f;
-        turnSpeed = 1.2f;
+        speed = Settings.playerSpeed;
+        turnSpeed = Settings.playerTurnSpeed;
+		//TODO ensure players start somewhere in corners and look to the middle
         angle = Main.r.nextFloat()*2*(float)Math.PI;
         lastAngle = angle;
         lastLastAngle = angle;
-        width = 0.008f;
+        width = Settings.playerWidth;
         alive = true;
         deathTime = 0;
     }
