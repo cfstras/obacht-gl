@@ -24,6 +24,7 @@ import org.lwjgl.MemoryUtil;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL12.*;
 import static org.lwjgl.opengl.GL13.*;
+import static org.lwjgl.opengl.GL30.*;
 import org.lwjgl.util.vector.Matrix4f;
 
 /**
@@ -55,16 +56,17 @@ public class FontLoader {
        
        fontTexID = glGenTextures();
        glBindTexture(GL_TEXTURE_2D, fontTexID);
-       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
        
        ByteBuffer buf = convertImageData(font.fontTex);
        
        glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,font.size,font.size,0,GL_RGBA,GL_UNSIGNED_BYTE,buf);
+	   //glGenerateMipmap(GL_TEXTURE_2D);
        loaded=font.loaded;
    }
    
-   public void drawString(String s, Matrix4f trans,float size) {
+   public void drawString(String s, Matrix4f trans, float size, float z) {
        if(!loaded) {
            System.out.println("error: font not loaded, tried to draw string "+s);
            return;
@@ -75,7 +77,6 @@ public class FontLoader {
        matBuf.clear();
        trans.store(matBuf);
        matBuf.flip();
-       //glColor4f(1,1,1,1);
        glLoadMatrix(matBuf);
        glBegin(GL_TRIANGLES);
        size *= font.size/font.fontSize;
@@ -83,13 +84,13 @@ public class FontLoader {
        for(int i=0;i<s.length();i++) {
            char c = s.charAt(i);
            Rectangle2D.Float rect = font.getCharRect(c);
-           glTexCoord2f(rect.x           , rect.y            ); glVertex3f(x, 0, 1);
-           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(x, -rect.height*size, 1);
-           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(x+rect.width*size, 0, 1);
+           glTexCoord2f(rect.x           , rect.y            ); glVertex3f(x, 0, z);
+           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(x, -rect.height*size, z);
+           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(x+rect.width*size, 0, z);
            
-           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(x+rect.width*size, 0, 1);
-           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(x, -rect.height*size, 1);
-           glTexCoord2f(rect.x+rect.width, rect.y+rect.height); glVertex3f(x+rect.width*size, -rect.height*size, 1);
+           glTexCoord2f(rect.x+rect.width, rect.y            ); glVertex3f(x+rect.width*size, 0, z);
+           glTexCoord2f(rect.x           , rect.y+rect.height); glVertex3f(x, -rect.height*size, z);
+           glTexCoord2f(rect.x+rect.width, rect.y+rect.height); glVertex3f(x+rect.width*size, -rect.height*size, z);
            x+=rect.width*size;
        }
        glEnd();

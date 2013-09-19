@@ -20,7 +20,8 @@ import static org.lwjgl.opengl.GL30.*;
  * @author claus
  */
 class Game {
-    
+
+	int numPlayers;
     boolean pause = false;
     int fieldFrameBuffer;
     int fieldColorTexture;
@@ -28,16 +29,20 @@ class Game {
     
     ArrayList<Player> players;
     int fieldSize;
+	int renderBufferSize;
     Color gameBackground = Color.BLACK;
-    boolean waitingForNewRound=false;
+    boolean waitingForNewRound = false;
+	boolean wasNewRound = false;
     
     public Game() {
-        fieldSize = Main.GAME_FIELD_SIZE;
+        this.fieldSize = Settings.gameFieldSize;
+		this.renderBufferSize = fieldSize * Settings.multiSampling;
+		this.numPlayers = Settings.numPlayers;
     }
 
     void init() {
-        players = new ArrayList<Player>(Main.NUM_PLAYERS);
-        for (int i = 0; i < Main.NUM_PLAYERS; i++) {
+        players = new ArrayList<Player>(numPlayers);
+        for (int i = 0; i < numPlayers; i++) {
             Player p = new Player(i);
             players.add(p);
         }
@@ -50,11 +55,16 @@ class Game {
         }
         if(waitingForNewRound) {
             newRound();
+			return;
         }
+		if(wasNewRound) {
+			wasNewRound = false;
+			return;
+		}
         
         glBindTexture(GL_TEXTURE_2D,0);
         glBindFramebuffer(GL_FRAMEBUFFER,fieldFrameBuffer);
-        glViewport(0,0,fieldSize,fieldSize);
+        glViewport(0,0,renderBufferSize,renderBufferSize);
         //glClearColor(0.0f,0.0f,0.0f,1.0f);
         //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
@@ -158,7 +168,7 @@ class Game {
             
         }
         
-        glDepthFunc(GL_ALWAYS);
+        glDepthFunc(GL_LEQUAL);
         glBindFramebuffer(GL_FRAMEBUFFER,0);
         
         if(playersAlive<=1) {
@@ -210,10 +220,9 @@ class Game {
     }
 
     private void newRound() {
-        fieldSize = Main.GAME_FIELD_SIZE;
         System.out.println("new game");
 
-		//TODO delete old fb
+		//delete old fb //TODO do this on exit, too
         if(fieldFrameBuffer != 0) {
 			glDeleteFramebuffers(fieldFrameBuffer);
 		}
@@ -231,24 +240,24 @@ class Game {
         glBindFramebuffer(GL_FRAMEBUFFER,fieldFrameBuffer);
         glBindTexture(GL_TEXTURE_2D,fieldColorTexture);
         glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, fieldSize, fieldSize, 0,GL_RGBA, GL_UNSIGNED_BYTE, (ByteBuffer)null);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, renderBufferSize, renderBufferSize, 0,GL_RGBA, GL_UNSIGNED_BYTE, (ByteBuffer)null);
         //TODO for multisampling, check here, too
         glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,fieldColorTexture,0);
         
         // create a render buffer as our depth buffer and attach it
         glBindRenderbuffer(GL_RENDERBUFFER, fieldRenderBuffer);
-        glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT, fieldSize, fieldSize);
+        glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT, renderBufferSize, renderBufferSize);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER, fieldRenderBuffer);
         int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if(status != GL_FRAMEBUFFER_COMPLETE) {
             System.out.println("Error creating framebuffer. "+status);
         }
         
-        glViewport(0,0,fieldSize,fieldSize);
+        glViewport(0,0,renderBufferSize,renderBufferSize);
         glClearColor(0.0f,0.0f,0.0f,1.0f);
         glClearDepth(0.0);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        
+        glClearDepth(1.0);
         //drawEdgeDebug();
         
         // Go back to regular frame buffer rendering
@@ -261,6 +270,7 @@ class Game {
             p.spawn();
         }
         waitingForNewRound=false;
+		wasNewRound = true;
     }
 
     private void drawEdgeDebug() {

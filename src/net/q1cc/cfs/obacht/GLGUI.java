@@ -10,15 +10,22 @@ import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.event.*;
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import net.q1cc.cfs.font.FontLoader;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.Sys;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.Display;
-import org.lwjgl.opengl.DisplayMode;
+import org.lwjgl.opengl.*;
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL12.*;
+import static org.lwjgl.opengl.GL13.*;
+import static org.lwjgl.opengl.GL14.*;
+import static org.lwjgl.opengl.GL15.*;
+import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL21.*;
+import static org.lwjgl.opengl.GL30.*;
 import org.lwjgl.util.glu.GLU;
 import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector3f;
@@ -36,7 +43,8 @@ class GLGUI implements ComponentListener, WindowFocusListener, WindowListener {
     double lastFPSTime;
     
     int fieldSize;
-    
+	int multiSampling;
+
     int windowLeftBorder    = 10;
     int windowTopBorder     = 10;
     int windowRightBorder   = 200;
@@ -54,9 +62,10 @@ class GLGUI implements ComponentListener, WindowFocusListener, WindowListener {
     Frame frame;
     Canvas canvas;
     private final static AtomicReference<Dimension> newCanvasSize = new AtomicReference<Dimension>();
-    
+    ArrayList<Pair<Player,Matrix4f>> drawLaterList;
+
     public GLGUI(Game game) throws LWJGLException {
-        this.game=game;
+        this.game = game;
         fieldSize = game.fieldSize;
         
         frame = new Frame("Obacht!");
@@ -71,7 +80,6 @@ class GLGUI implements ComponentListener, WindowFocusListener, WindowListener {
         windowX = fieldSize+windowLeftBorder+windowRightBorder;
         windowY = fieldSize+windowTopBorder+windowBotBorder;
 
-        
         Display.setSwapInterval(1);
         Display.setParent(canvas);
         Display.setVSyncEnabled(true);
@@ -87,10 +95,11 @@ class GLGUI implements ComponentListener, WindowFocusListener, WindowListener {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_ALWAYS);
+        glDepthFunc(GL_LEQUAL);
         
         loadStuff();
-        
+        drawLaterList = new ArrayList<Pair<Player,Matrix4f>>(Settings.numPlayers*2);
+
         Time.startTime = Time.lastFPSTime = Time.lastFrameTime = Time.time
                 = Sys.getTime()/(double)Sys.getTimerResolution();
         
@@ -125,9 +134,9 @@ class GLGUI implements ComponentListener, WindowFocusListener, WindowListener {
                 //Display.setTitle("Obacht!");// fps: "+((int)(fps*100)/100.0f)+" time: "+(int)((time-startTime)*1000)/1000.0 + " delta: "+deltaTime);
             }
             double waitTime = (double)(1.0/Time.targetFPS)-(Time.time-Time.lastFrameTime);
-            if(waitTime>0) { //only sleep if we would sleep more than 10 msecs
+            if(waitTime>0) { //only sleep if we would sleep more than 0 msecs
                 try {
-                    Thread.sleep((int)(waitTime*1000));//30 fps
+                    Thread.sleep((int)(waitTime*1000));
                 } catch (InterruptedException ex) {}
                 Time.timeToWait=Time.timeToWait*0.9f+(waitTime)*0.1f;
             }
@@ -151,17 +160,16 @@ class GLGUI implements ComponentListener, WindowFocusListener, WindowListener {
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         
         //draw field
-        
         glViewport(windowLeftBorder, windowBotBorder, fieldSize, fieldSize);
-        drawField();
+        drawField(0.9f);
         glViewport(0,0,windowX,windowY);
-        drawBorder();
+        drawBorder(0.5f);
         //gui!
-        drawHUD();
+        drawHUD(0.2f);
         Display.update();
         checkError();
     }
-    private void drawBorder() {
+    private void drawBorder(float z) {
         //draw border
         glPushMatrix();
         glLoadIdentity();
@@ -175,83 +183,103 @@ class GLGUI implements ComponentListener, WindowFocusListener, WindowListener {
         //.put(windowLeftBorder-1).put(windowTopBorder+fieldSize).put(1f)
         //.put(windowLeftBorder-1).put(windowTopBorder-1).put(1f);
         float edge = 1-1.0f/(fieldSize+1);
-        pts .put(-1).put(edge).put(1f)
-            .put(edge).put(edge).put(1f)
-            .put(edge).put(-1).put(1f)
-            .put(-1).put(-1).put(1f)
-            .put(-1).put(edge).put(1f);
+        pts .put(-1).put(edge).put(z)
+            .put(edge).put(edge).put(z)
+            .put(edge).put(-1).put(z)
+            .put(-1).put(-1).put(z)
+            .put(-1).put(edge).put(z);
         pts.flip();
-        glColor4f(1,1,1,1);
+        glColor4f(0.2f,0.2f,0.2f,1);
         glVertexPointer(3,0,pts);
         glDrawArrays(GL_LINE_STRIP, 0, 5);
         glPopMatrix();
     }
     
-    private void drawField() {
-        
+    private void drawField(float z) {
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D,game.fieldColorTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+		
         glBegin(GL_TRIANGLE_STRIP);
         glColor4f(1,1,1,1);
-        glTexCoord2f(0,1); glVertex2f(-1,1);
-        glTexCoord2f(0,0); glVertex2f(-1,-1);
-        glTexCoord2f(1,1); glVertex2f(1,1);
-        glTexCoord2f(1,0); glVertex2f(1,-1);
+        glTexCoord2f(0,1); glVertex3f(-1, 1, z);
+        glTexCoord2f(0,0); glVertex3f(-1,-1, z);
+        glTexCoord2f(1,1); glVertex3f( 1, 1, z);
+        glTexCoord2f(1,0); glVertex3f( 1,-1, z);
         glEnd();
         glDisable(GL_TEXTURE_2D);
         for(Player p: game.players){
             p.drawHead();
         }
-        
     }
-    private void drawHUD() {
+    private void drawHUD(float z) {
         float fontSize = Settings.hudFontSize;
         int hudXSize = windowRightBorder-hudLeftBorder-hudRightBorder;
         int hudYSize = windowY-windowTopBorder-windowBotBorder-hudTopBorder-hudBotBorder;
         glViewport(windowLeftBorder+fieldSize+hudLeftBorder, windowBotBorder+hudBotBorder, hudXSize, hudYSize);
         Matrix4f mat = new Matrix4f();
-        mat = mat.translate(new Vector3f(-1.0f,1.0f,0.0f));
-        //mat = mat.scale(new Vector3f(1.0f/windowX, 1.0f/windowY, 1.0f));
-        mat = mat.scale(new Vector3f(1.0f/hudXSize, 1.0f/hudYSize, 1.0f));
-        font.drawString("Player Scores:", mat,fontSize);
-        mat = mat.translate(new Vector3f(0,-fontSize*2,0));
-        
-        for(Player p:game.players) {
-            glColor3ub((byte)p.color.getRed(), (byte)p.color.getGreen(), (byte)p.color.getBlue());
-            float fontTmp = fontSize;
-            if (p.lastScoreTime + Settings.scoreNameWinGrowTime > Time.time) {
-                fontTmp += (Math.sin(Math.PI*(Time.time - p.lastScoreTime)
-                        / (Settings.scoreNameWinGrowTime/2)
-                        - 0.5*Math.PI)+1)*fontSize*0.7f;
-            }
-            font.drawString(p.name+": "+p.score, mat,fontTmp);
-            mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
+        mat.translate(new Vector3f(-1.0f,1.0f,0.0f));
+        mat.scale(new Vector3f(1.0f/hudXSize, 1.0f/hudYSize, 1.0f));
+        font.drawString("Player Scores:", mat,fontSize, z);
+        mat.translate(new Vector3f(0,-fontSize*2,0));
+
+		// draw player list
+		drawLaterList.clear();
+        for(Player p : game.players) {
+            drawPlayerEntry(p, mat, z, true);
         }
+
         glColor3f(1, 1, 1);
-        mat = mat.translate(new Vector3f(0,-fontSize,0));
+        mat.translate(new Vector3f(0,-fontSize,0));
         
         String status;
         if(!game.pause) status="pause";
         else if(game.waitingForNewRound) status="new game";
         else status="unpause";
-        font.drawString("SPACE = "+status, mat, fontSize);
-        mat = mat.translate(new Vector3f(0,-fontSize*2,0));
+        font.drawString("SPACE = "+status, mat, fontSize, z);
+        mat.translate(new Vector3f(0,-fontSize*2,0));
         
         glColor3f(0.15f, 0.15f, 0.15f);
         fontSize=20.0f;
-        font.drawString("fps: "+Math.floor(Time.fps*100)/100, mat, fontSize);
-        mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
+        font.drawString("fps: "+Math.floor(Time.fps*100)/100, mat, fontSize, z);
+        mat.translate(new Vector3f(0,-fontSize*1.3f,0));
         font.drawString("frameWait: "+Math.floor(Time.timeToWait*1000000)/100,
-                mat, fontSize);
-        mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
+                mat, fontSize, z);
+        mat.translate(new Vector3f(0,-fontSize*1.3f,0));
         font.drawString("time: "+Math.floor((Time.time-Time.startTime)*100)/100,
-                mat, fontSize);
-        mat = mat.translate(new Vector3f(0,-fontSize*1.3f,0));
+                mat, fontSize, z);
+        mat.translate(new Vector3f(0,-fontSize*1.3f,0));
         font.drawString("delta: "+Math.floor((Time.deltaTime)*100000)/100, mat,
-                fontSize);
-        
+                fontSize, z);
+
+		// draw elements that need to be in foreground
+        for(Pair<Player,Matrix4f> p : drawLaterList) {
+            drawPlayerEntry(p.a, p.b, z, false);
+        }
+
         glViewport(0,0,windowX,windowY);
     }
+
+	Matrix4f drawPlayerEntry(Player p, Matrix4f mat, float z, boolean addLater) {
+		float fontSize = Settings.hudFontSize;
+		float fontTmp = fontSize;
+		
+		if (p.lastScoreTime + Settings.scoreNameWinGrowTime > Time.time) {
+			if(addLater) {
+				drawLaterList.add(new Pair<Player,Matrix4f>(p, new Matrix4f(mat)));
+				return mat.translate(new Vector3f(0,-fontSize*1.3f,0));
+			}
+			fontTmp += (Math.sin(Math.PI*(Time.time - p.lastScoreTime)
+				/ (Settings.scoreNameWinGrowTime/2)
+				- 0.5*Math.PI)+1)*fontSize*0.7f;
+			z -= 0.1f;
+		}
+
+		glColor3ub((byte)p.color.getRed(), (byte)p.color.getGreen(), (byte)p.color.getBlue());
+		
+		font.drawString(p.name+": "+p.score, mat, fontTmp, z);
+		return mat.translate(new Vector3f(0,-fontSize*1.3f,0));
+	}
 
     private void doInput() {
         while(Keyboard.next()) {
@@ -295,18 +323,19 @@ class GLGUI implements ComponentListener, WindowFocusListener, WindowListener {
         font = new FontLoader();
         font.loadFont();
     }
-    
-    private void drawTexture(int id) {
+
+	// debug
+    private void drawTexture(int id, float z) {
         glPushMatrix();
         glLoadIdentity();
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D,id);
         glBegin(GL_TRIANGLE_STRIP);
         glColor4f(1,1,1,1);
-        glTexCoord2f(0,0); glVertex2f(-1,1);
-        glTexCoord2f(0,1); glVertex2f(-1,-1);
-        glTexCoord2f(1,0); glVertex2f(1,1);
-        glTexCoord2f(1,1); glVertex2f(1,-1);
+        glTexCoord2f(0,0); glVertex3f(-1, 1, z);
+        glTexCoord2f(0,1); glVertex3f(-1,-1, z);
+        glTexCoord2f(1,0); glVertex3f( 1, 1, z);
+        glTexCoord2f(1,1); glVertex3f( 1,-1, z);
         glEnd();
         glDisable(GL_TEXTURE_2D);
         glPopMatrix();

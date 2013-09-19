@@ -4,12 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 import org.lwjgl.LWJGLException;
+import org.lwjgl.Sys;
 
 
 class Main {
-
-    public final static int NUM_PLAYERS = 3;
-    public final static int GAME_FIELD_SIZE = 800;
     
     static boolean collisionDisabled=false;
     
@@ -44,7 +42,7 @@ class Main {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-        
+        System.out.println("LWJGL "+Sys.getVersion());
         try {
             r = new Random();
             game = new Game();
